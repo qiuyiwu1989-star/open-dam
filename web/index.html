@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>open-dam · AI 原生图库</title>
+<style>
+  :root{
+    --paper:#f4f1ea; --card:#fffdf8; --ink:#2b2620; --muted:#8a7f6d;
+    --line:#ddd2ba; --accent:#b0673a; --accent-soft:#f0e4d4; --ok:#5d7a52; --bad:#a34a3a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--paper);color:var(--ink);font-family:"Noto Serif SC","Songti SC",serif;min-height:100vh}
+  header{display:flex;align-items:center;gap:16px;padding:16px 28px;border-bottom:1px solid var(--line);background:var(--card);position:sticky;top:0;z-index:10;flex-wrap:wrap}
+  .logo{font-size:20px;font-weight:700;letter-spacing:1px}
+  .logo em{color:var(--accent);font-style:normal}
+  .stats{font:11px "JetBrains Mono",Menlo,monospace;color:var(--muted)}
+  .search{flex:1;min-width:220px;display:flex;gap:8px}
+  .search input{flex:1;padding:9px 14px;border:1px solid var(--line);border-radius:99px;background:var(--paper);font-size:14px;outline:none}
+  .search input:focus{border-color:var(--accent)}
+  .btn{padding:9px 18px;border:none;border-radius:99px;background:var(--accent);color:#fff;font-size:13px;cursor:pointer;font-family:inherit}
+  .btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+  .filters{display:flex;gap:8px;padding:12px 28px;flex-wrap:wrap;align-items:center}
+  .chip{padding:5px 14px;border:1px solid var(--line);border-radius:99px;background:var(--card);font-size:12.5px;cursor:pointer;color:var(--muted)}
+  .chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  #dropzone{margin:8px 28px 18px;border:2px dashed var(--line);border-radius:14px;padding:26px;text-align:center;color:var(--muted);font-size:14px;cursor:pointer;transition:.2s;background:var(--card)}
+  #dropzone.over{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+  #upload-report{margin:0 28px 14px;font:12px "JetBrains Mono",Menlo,monospace;color:var(--ok);white-space:pre-wrap}
+  #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;padding:0 28px 60px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;transition:.15s}
+  .card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(90,70,40,.12)}
+  .card img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:#eee}
+  .card .meta{padding:8px 10px;font-size:11.5px;color:var(--muted)}
+  .card .meta b{display:block;color:var(--ink);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tagline{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
+  #modal{position:fixed;inset:0;background:rgba(30,25,18,.55);display:none;align-items:center;justify-content:center;z-index:50;padding:24px}
+  #modal.open{display:flex}
+  .panel{background:var(--paper);border-radius:14px;max-width:1000px;width:100%;max-height:92vh;overflow:auto;padding:24px;position:relative}
+  .panel .close{position:absolute;top:14px;right:18px;cursor:pointer;color:var(--muted);font-size:20px;background:none;border:none}
+  .dwrap{display:flex;gap:22px;flex-wrap:wrap}
+  .dwrap img.main{width:min(420px,100%);border-radius:10px;background:#eee}
+  .dinfo{flex:1;min-width:240px;font-size:13.5px;line-height:1.9}
+  .dinfo h3{font-size:16px;margin-bottom:6px;word-break:break-all}
+  .kv{color:var(--muted);font-size:12.5px}
+  .sim{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .sim img{width:76px;height:76px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid var(--line)}
+  .sim-title{margin-top:16px;font-size:13px;color:var(--accent);font-weight:700}
+  .empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:60px 0;font-size:14px}
+  select{padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-family:inherit;font-size:12.5px;color:var(--ink)}
+  #colorpick{display:flex;align-items:center;gap:6px}
+  #colorpick input{width:34px;height:30px;border:1px solid var(--line);border-radius:8px;background:none;padding:2px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">open-<em>dam</em></div>
+  <div class="stats" id="stats">载入中…</div>
+  <div class="search">
+    <input id="q" placeholder='语义搜索:试试 "红色沙发"、"秋天的海报"…(回车)'>
+    <button class="btn" id="search-btn">搜索</button>
+    <button class="btn ghost" id="reset-btn">全部</button>
+  </div>
+</header>
+
+<div class="filters" id="filters">
+  <span class="chip on" data-hue="">全部色相</span>
+  <span id="hue-chips"></span>
+  <span style="flex:1"></span>
+  <span id="colorpick"><input type="color" id="cpick" value="#b0673a"><button class="chip" id="csearch">按此色搜</button></span>
+  <select id="cat"><option value="">全部分类</option></select>
+  <select id="coll"><option value="">集合…</option></select>
+</div>
+
+<div id="dropzone">把图片或整个文件夹拖到这里上传 · 自动去重 / 主色 / 向量 / 打标 / 质检</div>
+<div id="upload-report"></div>
+<div id="grid"></div>
+
+<div id="modal">
+  <div class="panel">
+    <button class="close" id="mclose">✕</button>
+    <div class="dwrap">
+      <img class="main" id="mimg">
+      <div class="dinfo">
+        <h3 id="mtitle"></h3>
+        <div class="kv" id="mkv"></div>
+        <div class="sim-title">相似图片</div>
+        <div class="sim" id="msim"></div>
+        <div class="sim-title">加入集合</div>
+        <div class="sim" id="mcoll"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileinp" multiple accept="image/*" style="display:none">
+
+<script>
+const $ = s => document.querySelector(s);
+const grid = $("#grid");
+let state = {hue:"", category:"", mode:"browse", q:"", coll:""};
+
+async function api(path, opt){ const r = await fetch(path, opt); if(!r.ok) throw new Error(await r.text()); return r.json(); }
+
+async function loadStats(){
+  try{
+    const s = await api("/api/stats");
+    $("#stats").textContent = s.active.toLocaleString()+" 张在库 · "+s.bytes_gb+" GB · 向量化 "+s.vectorized.toLocaleString()+(s.processing? " · 处理中 "+s.processing:"");
+  }catch(e){ $("#stats").textContent = "API 未就绪"; }
+}
+
+function card(a){
+  const d = document.createElement("div");
+  d.className = "card";
+  const img = document.createElement("img");
+  img.loading = "lazy"; img.src = a.image; img.alt = a.filename || "";
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  const b = document.createElement("b"); b.textContent = a.filename || ("#"+a.asset_id);
+  const sub = document.createElement("span");
+  const dot = document.createElement("span"); dot.className="tagline"; dot.style.background = a.ave_rgb || "#ccc";
+  sub.appendChild(dot);
+  sub.appendChild(document.createTextNode((a.category||"未分类") + (a.hue? " · "+a.hue : "")));
+  meta.appendChild(b); meta.appendChild(sub);
+  d.appendChild(img); d.appendChild(meta);
+  d.onclick = () => openDetail(a.asset_id);
+  return d;
+}
+
+async function load(){
+  grid.innerHTML = "";
+  let data;
+  try{
+    if(state.mode === "text") data = await api("/api/search/text?q="+encodeURIComponent(state.q));
+    else if(state.mode === "color") data = await api("/api/search/color?hex="+encodeURIComponent(state.q));
+    else if(state.mode === "coll") data = await api("/api/collections/"+state.coll+"/items");
+    else{
+      const p = new URLSearchParams();
+      if(state.hue) p.set("hue", state.hue);
+      if(state.category) p.set("category", state.category);
+      data = await api("/api/assets?"+p.toString());
+    }
+  }catch(e){ grid.innerHTML = ""; const x=document.createElement("div"); x.className="empty"; x.textContent="加载失败:"+e.message; grid.appendChild(x); return; }
+  if(!data.items || !data.items.length){
+    const x=document.createElement("div"); x.className="empty"; x.textContent="没有结果 —— 拖一些图进来试试"; grid.appendChild(x); return;
+  }
+  data.items.forEach(a => grid.appendChild(card(a)));
+}
+
+async function loadFacets(){
+  const f = await api("/api/facets");
+  const hc = $("#hue-chips");
+  f.hues.forEach(h => {
+    const c = document.createElement("span");
+    c.className = "chip"; c.textContent = h.k+" "+h.n;
+    c.onclick = () => { state.hue = state.hue===h.k? "" : h.k; state.mode="browse";
+      document.querySelectorAll(".chip[data-hue]").forEach(x=>x.classList.remove("on")); load(); };
+    hc.appendChild(c);
+  });
+  f.categories.forEach(c => {
+    const o = document.createElement("option"); o.value=c.k; o.textContent=c.k+" ("+c.n+")"; $("#cat").appendChild(o);
+  });
+  const cl = await api("/api/collections");
+  cl.items.forEach(c => {
+    const o = document.createElement("option"); o.value=c.id; o.textContent=c.name+" ("+c.n+")"; $("#coll").appendChild(o);
+  });
+}
+
+async function openDetail(id){
+  const a = await api("/api/assets/"+id);
+  $("#mimg").src = a.image;
+  $("#mtitle").textContent = a.filename || ("#"+a.asset_id);
+  $("#mkv").textContent = [a.fmt, a.width+"×"+a.height, (a.bytes/1024).toFixed(0)+" KB",
+    a.category||"", (a.tags||[]).join(" · "), a.hue? "色相:"+a.hue : ""].filter(Boolean).join("  |  ");
+  $("#modal").classList.add("open");
+  const sim = $("#msim"); sim.innerHTML = "";
+  try{
+    const s = await api("/api/similar/"+id+"?limit=12");
+    s.items.forEach(x => {
+      const i = document.createElement("img"); i.src = x.image;
+      i.onclick = () => openDetail(x.asset_id);
+      sim.appendChild(i);
+    });
+  }catch(e){ sim.textContent = "向量处理中,稍后再试"; }
+  const mc = $("#mcoll"); mc.innerHTML = "";
+  const cl = await api("/api/collections");
+  cl.items.forEach(c => {
+    const b = document.createElement("button"); b.className="chip"; b.textContent = "+ "+c.name;
+    b.onclick = async () => { await api("/api/collections/"+c.id+"/add?asset_id="+id, {method:"POST"}); b.textContent="✓ 已加入 "+c.name; };
+    mc.appendChild(b);
+  });
+  const nb = document.createElement("button"); nb.className="chip"; nb.textContent="+ 新建集合";
+  nb.onclick = async () => {
+    const name = prompt("集合名称:"); if(!name) return;
+    await api("/api/collections?name="+encodeURIComponent(name), {method:"POST"});
+    openDetail(id);
+  };
+  mc.appendChild(nb);
+}
+
+$("#mclose").onclick = () => $("#modal").classList.remove("open");
+$("#modal").onclick = e => { if(e.target.id==="modal") $("#modal").classList.remove("open"); };
+
+$("#search-btn").onclick = doSearch;
+$("#q").onkeydown = e => { if(e.key==="Enter") doSearch(); };
+function doSearch(){
+  const v = $("#q").value.trim(); if(!v) return;
+  state = {hue:"", category:"", mode:"text", q:v, coll:""};
+  load();
+}
+$("#reset-btn").onclick = () => { state = {hue:"",category:"",mode:"browse",q:"",coll:""}; $("#q").value=""; load(); };
+$("#cat").onchange = e => { state.category = e.target.value; state.mode="browse"; load(); };
+$("#coll").onchange = e => { if(!e.target.value) return; state.mode="coll"; state.coll=e.target.value; load(); };
+$("#csearch").onclick = () => { state = {hue:"",category:"",mode:"color",q:$("#cpick").value,coll:""}; load(); };
+
+const dz = $("#dropzone");
+dz.onclick = () => $("#fileinp").click();
+$("#fileinp").onchange = e => uploadFiles(e.target.files);
+dz.ondragover = e => { e.preventDefault(); dz.classList.add("over"); };
+dz.ondragleave = () => dz.classList.remove("over");
+dz.ondrop = e => { e.preventDefault(); dz.classList.remove("over"); uploadFiles(e.dataTransfer.files); };
+
+async function uploadFiles(files){
+  if(!files || !files.length) return;
+  const fd = new FormData();
+  let n = 0;
+  for(const f of files){ if(f.type.startsWith("image/")){ fd.append("files", f); n++; } }
+  if(!n){ $("#upload-report").textContent = "没有可上传的图片文件"; return; }
+  $("#upload-report").textContent = "上传中… "+n+" 个文件";
+  try{
+    const r = await api("/api/upload", {method:"POST", body:fd});
+    const acc = r.results.filter(x=>x.status==="accepted").length;
+    const dup = r.results.filter(x=>x.status==="duplicate").length;
+    const bad = r.results.length - acc - dup;
+    $("#upload-report").textContent = "完成:新增 "+acc+" 张" + (dup? " · 重复跳过 "+dup+" 张":"") + (bad? " · 无效 "+bad:"") + "\nAI 处理(向量/打标/质检)在后台进行,几秒到几分钟后可搜。";
+    loadStats(); setTimeout(load, 1500);
+  }catch(e){ $("#upload-report").textContent = "上传失败: "+e.message; }
+}
+
+(async function init(){
+  await loadStats();
+  try{ await loadFacets(); }catch(e){}
+  load();
+  setInterval(loadStats, 30000);
+})();
+</script>
+</body>
+</html>

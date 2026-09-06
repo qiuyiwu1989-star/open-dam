@@ -1,0 +1,22 @@
+:80
+
+# API
+handle /api/* {
+	reverse_proxy app:8091
+}
+handle /healthz {
+	reverse_proxy app:8091
+}
+
+# 图片(内容寻址存储,只读)
+handle_path /img/* {
+	root * /srv/uploads
+	file_server
+}
+
+# 前端
+handle {
+	root * /srv/web
+	try_files {path} /index.html
+	file_server
+}

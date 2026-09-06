@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# 本地数据(绝不入库)
+data/
+models/
+*.db
+
+# 环境
+.env
+
+# 系统
+.DS_Store
