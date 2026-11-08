@@ -1,0 +1,9 @@
+[
+  {
+    "bucket": "example-assets-1234567890",
+    "region": "ap-shanghai",
+    "lib": "cos_example",
+    "label": "Example image source",
+    "credential_file": "~/.opendam/cos.json"
+  }
+]

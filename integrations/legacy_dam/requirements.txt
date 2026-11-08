@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+psycopg2-binary
+numpy
+torch
+openai-clip
+Pillow
+ImageHash
+cos-python-sdk-v5
+requests
