@@ -13,3 +13,15 @@ models/
 
 # 系统
 .DS_Store
+
+# Private runtime settings and operational evidence
+.env.*
+!.env.example
+cos_sources.json
+*.pem
+*.key
+*.dump
+credentials*.json
+production-config/
+private-export/
+audit-snapshots/

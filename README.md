@@ -75,6 +75,15 @@ PostgreSQL + pgvector（HNSW 向量索引）· FastAPI · OpenCLIP (ViT-B/32) ·
 - [ ] 视频/设计文件预览
 - [ ] Webhook 与开放 API key
 
+## 线上兼容代码与可靠性修复
+
+本仓库同时保留了一份经过脱敏的[线上 Legacy DAM 兼容代码](integrations/legacy_dam/README.md)，
+包含平台游标同步、COS 增量登记、文件失败台账和本地向量缩略图修复。
+它依赖已有 Legacy DAM 数据库，**不是根目录 Docker 版的直接替换或自动迁移**；
+两者使用的 CLIP 权重也不同。生产密钥、数据快照、私人桶配置和运维日志不在仓库中。
+
+运行回归检查：`python3 -m unittest discover -s tests -v`。
+
 ## License
 
 [Apache-2.0](LICENSE)
